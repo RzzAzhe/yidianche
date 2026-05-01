@@ -1,5 +1,9 @@
 <template>
   <div class="publish">
+    <!-- 调试标识：代码已更新 - 2026-05-01 -->
+    <div style="background: #ff5f5f; color: white; padding: 10px; margin-bottom: 10px; font-weight: bold;">
+      ⚠️ 代码已更新：使用新的 CustomEditor 编辑器
+    </div>
     <ContentManage :tabs="tabs" extSoltName="extInfo" :changeHeaderTab="changeHeaderTab">
       <div slot="extInfo">
         <div class="type_info">
@@ -121,7 +125,7 @@
 
 <script lang="ts">
 import Vue from "vue";
-import Editor from "../compoents/TinyEditor.vue";
+import Editor from "../compoents/CustomEditor.vue";
 import { ITab } from "../store/Itype";
 import ContentManage from "../compoents/ContentManage.vue";
 import Toast from "../compoents/Toast.vue";
@@ -129,6 +133,7 @@ import { createArticle, getPublishedArticles } from "../store/articleStore";
 
 export default Vue.extend({
   data() {
+    console.log("===== Publish.vue 已加载 - 使用 CustomEditor =====");
     let publish_article: ITab = {
       name: "发布文章",
       isActive: true,
@@ -224,7 +229,7 @@ export default Vue.extend({
         this.showToastMessage("标题不能超过30字");
         return false;
       }
-      const editorContent = (this.$refs.editorRef as any)?.getContent?.() || "";
+      const editorContent = (this.$refs.editorRef as any)?.getHtml?.() || (this.$refs.editorRef as any)?.getText?.() || "";
       if (!editorContent || editorContent.trim() === "") {
         this.showToastMessage("请输入文章内容");
         return false;
@@ -239,7 +244,7 @@ export default Vue.extend({
         this.showToastMessage("今日发布数量已达上限(6篇)");
         return;
       }
-      const editorContent = (this.$refs.editorRef as any)?.getContent?.() || "";
+      const editorContent = (this.$refs.editorRef as any)?.getHtml?.() || (this.$refs.editorRef as any)?.getText?.() || "";
       createArticle(
         this.articleTitle,
         editorContent,
@@ -257,7 +262,7 @@ export default Vue.extend({
         this.showToastMessage("请输入文章标题");
         return;
       }
-      const editorContent = (this.$refs.editorRef as any)?.getContent?.() || "";
+      const editorContent = (this.$refs.editorRef as any)?.getHtml?.() || (this.$refs.editorRef as any)?.getText?.() || "";
       createArticle(
         this.articleTitle,
         editorContent,
@@ -281,7 +286,12 @@ export default Vue.extend({
       this.category2 = "01";
       this.coverImg = "../images/noimg.gif";
       if (this.$refs.editorRef) {
-        (this.$refs.editorRef as any).setContent("");
+        const editor = this.$refs.editorRef as any;
+        if (editor.clear) {
+          editor.clear();
+        } else if (editor.setHtml) {
+          editor.setHtml("");
+        }
       }
     }
   }
