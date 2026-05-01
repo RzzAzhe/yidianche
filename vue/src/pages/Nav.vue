@@ -26,11 +26,7 @@ export default Vue.extend({
     Menu,
     Footer
   },
-  router: HomeRouter,
-  mounted() {
-    console.log("===== 代码已更新 - Nav.vue 已加载 =====");
-    console.log("布局设置：导航栏宽度240px，内容区flex:1自动拉伸");
-  }
+  router: HomeRouter
 });
 </script>
 <style scoped>

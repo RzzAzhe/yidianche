@@ -1,9 +1,5 @@
 <template>
   <div class="publish">
-    <!-- 调试标识：代码已更新 - 2026-05-01 -->
-    <div style="background: #ff5f5f; color: white; padding: 10px; margin-bottom: 10px; font-weight: bold;">
-      ⚠️ 代码已更新：使用新的 CustomEditor 编辑器
-    </div>
     <ContentManage :tabs="tabs" extSoltName="extInfo" :changeHeaderTab="changeHeaderTab">
       <div slot="extInfo">
         <div class="type_info">
@@ -133,7 +129,6 @@ import { createArticle, getPublishedArticles } from "../store/articleStore";
 
 export default Vue.extend({
   data() {
-    console.log("===== Publish.vue 已加载 - 使用 CustomEditor =====");
     let publish_article: ITab = {
       name: "发布文章",
       isActive: true,
