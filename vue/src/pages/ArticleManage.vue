@@ -4,28 +4,44 @@
       <div slot="content_manage">
         <div class="content_search">
           <div class="search_types">
-            <select name id class="search_select">
+            <select v-model="searchType" class="search_select">
               <option value>全部类型</option>
+              <option value="published">已发布</option>
+              <option value="draft">草稿</option>
             </select>
-            <select name id class="search_select">
+            <select v-model="searchStatus" class="search_select">
               <option value>全部状态</option>
+              <option value="true">已通过</option>
+              <option value="false">未通过</option>
             </select>
           </div>
           <div class="search_txt">
-            <input type="text" />
-            <button>搜索</button>
+            <input type="text" v-model="searchKeyword" placeholder="请输入关键词搜索" />
+            <button @click="doSearch">搜索</button>
           </div>
         </div>
         <div class="total_count_info pdl20 mgt40">
           共
-          <span class="theme_color">9</span>条内容
+          <span class="theme_color">{{totalCount}}</span>条内容
         </div>
 
         <div class="articleList mgt40">
-          <ArticleItem v-for="(item) in articles" :content="item" :key="item.title"></ArticleItem>
+          <ArticleItem 
+            v-for="item in currentArticles" 
+            :content="item" 
+            :key="item.id"
+          ></ArticleItem>
+          <div v-if="currentArticles.length === 0" class="empty_tip">
+            暂无内容
+          </div>
         </div>
-        <div class="pagion mgt40">
-          <Pagin></Pagin>
+        <div class="pagion mgt40" v-if="totalCount > 0">
+          <Pagin 
+            :currentPage="currentPage"
+            :pageSize="pageSize"
+            :totalCount="totalCount"
+            @page-change="handlePageChange"
+          ></Pagin>
         </div>
         <div class="ads mgt40">
           <SwiperAds :adImgs="adImgs" />
@@ -50,6 +66,8 @@ import ContentManage from "../compoents/ContentManage.vue";
 import ArticleItem from "../compoents/ArticleItem.vue";
 import Pagin from "../compoents/Pagin.vue";
 import SwiperAds from "../compoents/SwiperAds.vue";
+import { getArticles, getArticlesByPage } from "../store/articleStore";
+
 export default Vue.extend({
   data() {
     let contentManage: ITab = {
@@ -57,44 +75,71 @@ export default Vue.extend({
       isActive: true,
       slotName: "content_manage"
     };
-    let articles: Array<IArticleItem> = [];
-    let articleItem_1: IArticleItem = {
-      title: "锤子R1价格赶超苹果iPhoneX，顶配骁龙845+1T卖到8848元你入手吗",
-      img: "../images/img-ad1.jpg",
-      isPass: false,
-      publishTime: "2018-05-15 23:37:33",
-      tjCount: 10,
-      ydCount: 100,
-      fxCount: 9
-    };
-    let articleItem_2: IArticleItem = {
-      title: "在国内为什么丰田阿尔法加价那么厉害还是会有人买？",
-      img: "../images/img-ad2.jpg",
-      isPass: true,
-      publishTime: "2018-05-15 23:37:33",
-      tjCount: 100,
-      ydCount: 1000,
-      fxCount: 90
-    };
-    let articleItem_3: IArticleItem = {
-      title: "大号“思域”全新十代雅阁，革新换代后的全新十代雅阁到底如何！",
-      img: "../images/img-ad3.jpg",
-      isPass: true,
-      publishTime: "2018-05-15 23:37:33",
-      tjCount: 20,
-      ydCount: 300,
-      fxCount: 19
-    };
-    articles.push(articleItem_1);
-    articles.push(articleItem_2);
-    articles.push(articleItem_3);
+    
     return {
       tabs: {
         contentManage
       },
-      articles,
+      articles: [] as IArticleItem[],
+      filteredArticles: [] as IArticleItem[],
+      currentPage: 1,
+      pageSize: 10,
+      searchType: "",
+      searchStatus: "",
+      searchKeyword: "",
       adImgs: ["../images/ad1.jpg", "../images/ad2.jpg", "../images/ad3.jpg"]
     };
+  },
+  computed: {
+    totalCount(): number {
+      return this.filteredArticles.length;
+    },
+    currentArticles(): IArticleItem[] {
+      const startIndex = (this.currentPage - 1) * this.pageSize;
+      const endIndex = startIndex + this.pageSize;
+      return this.filteredArticles.slice(startIndex, endIndex);
+    }
+  },
+  mounted() {
+    this.loadArticles();
+  },
+  methods: {
+    loadArticles() {
+      this.articles = getArticles();
+      this.applyFilters();
+    },
+    applyFilters() {
+      let result = [...this.articles];
+      
+      if (this.searchType === 'published') {
+        result = result.filter(a => a.status === 'published');
+      } else if (this.searchType === 'draft') {
+        result = result.filter(a => a.status === 'draft');
+      }
+      
+      if (this.searchStatus === 'true') {
+        result = result.filter(a => a.isPass === true);
+      } else if (this.searchStatus === 'false') {
+        result = result.filter(a => a.isPass === false);
+      }
+      
+      if (this.searchKeyword && this.searchKeyword.trim() !== '') {
+        const keyword = this.searchKeyword.trim().toLowerCase();
+        result = result.filter(a => 
+          a.title.toLowerCase().includes(keyword)
+        );
+      }
+      
+      this.filteredArticles = result;
+      this.currentPage = 1;
+    },
+    doSearch() {
+      this.applyFilters();
+    },
+    handlePageChange(page: number) {
+      this.currentPage = page;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   },
   components: {
     ContentManage,
@@ -121,9 +166,12 @@ export default Vue.extend({
 .search_txt {
   text-align: right;
   flex: 3.5;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
 }
 .search_txt > input {
-  width: 84%;
+  width: 70%;
   height: 40px;
   color: #666;
   outline: none;
@@ -131,15 +179,24 @@ export default Vue.extend({
   box-sizing: border-box;
   border: 1px solid #d0d0d0;
 }
+.search_txt > input:focus {
+  border-color: #ff5f5f;
+}
 .search_txt > button {
   width: 80px;
   height: 40px;
   outline: none;
-  float: right;
   font-size: 16px;
   background: #f4f4f4 !important;
   border: 1px solid #ddd;
   border-left-width: 0px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+.search_txt > button:hover {
+  background: #ff5f5f !important;
+  color: white;
+  border-color: #ff5f5f;
 }
 .search_select {
   width: 150px;
@@ -147,5 +204,16 @@ export default Vue.extend({
   border: 1px solid #d0d0d0;
   margin-right: 10px;
   color: #666;
+  padding: 0 10px;
+  cursor: pointer;
+}
+.search_select:focus {
+  border-color: #ff5f5f;
+}
+.empty_tip {
+  text-align: center;
+  padding: 60px 0;
+  color: #999;
+  font-size: 16px;
 }
 </style>

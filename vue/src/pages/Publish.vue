@@ -4,30 +4,42 @@
       <div slot="extInfo">
         <div class="type_info">
           今日发布数量:&nbsp;&nbsp;
-          <span class="marginR5 theme_color">0</span>/6
+          <span class="marginR5 theme_color">{{todayPublishCount}}</span>/6
           <span class="theme_color">发文规范</span>
         </div>
       </div>
       <div slot="publish_article">
         <div class="publish_article">
-          <Toast>标题字数需在11字到30字之间。</Toast>
+          <Toast v-if="showToast">{{toastMessage}}</Toast>
           <div class="title_con">
-            <input type="text" class="title_txt" placeholder="请输入标题，为了更好的展示效果，建议标题字数在30个汉字以内" />
+            <input 
+              type="text" 
+              class="title_txt" 
+              v-model="articleTitle"
+              placeholder="请输入标题，为了更好的展示效果，建议标题字数在30个汉字以内" 
+              @input="updateTitleCount"
+            />
             <div class="txt_num_ts">
-              <span class="theme_color marginR5">0</span>/30
+              <span :class="titleLength > 30 ? 'error_color' : 'theme_color'" class="marginR5">{{titleLength}}</span>/30
             </div>
           </div>
           <div class="html_editor">
-            <Editor />
+            <Editor ref="editorRef" />
           </div>
           <div class="article_type">
             <div class="flex_label">分类:</div>
             <div class="flex_content">
-              <select name id class="select">
-                <option value="01">分类一</option>
+              <select v-model="category1" class="select">
+                <option value="01">汽车资讯</option>
+                <option value="02">新车评测</option>
+                <option value="03">用车技巧</option>
+                <option value="04">行业动态</option>
               </select>
-              <select name id class="select">
-                <option value="01">分类二</option>
+              <select v-model="category2" class="select">
+                <option value="01">国产</option>
+                <option value="02">合资</option>
+                <option value="03">进口</option>
+                <option value="04">新能源</option>
               </select>
             </div>
           </div>
@@ -35,9 +47,16 @@
             <div class="flex_label">封面:</div>
             <div class="flex_content">
               <div class="img_con">
-                <img src="../images/noimg.gif" alt />
+                <img :src="coverImg" alt="封面图片" />
               </div>
-              <input class="file_upload" type="file" name="img_upload" id="img_upload" />
+              <input 
+                class="file_upload" 
+                type="file" 
+                name="img_upload" 
+                id="img_upload" 
+                accept="image/*"
+                @change="handleImageUpload"
+              />
               <button class="upload_btn" @click="uploadImg">上传图片</button>
               <span class="upload_text">图片尺寸建议：800*400 图片大小不超过1MB</span>
             </div>
@@ -45,8 +64,8 @@
           <div class="btns">
             <div class="flex_label">&nbsp;</div>
             <div class="flex_content">
-              <div class="publish_btn send">发布</div>
-              <div class="publish_btn drash">保存草稿</div>
+              <div class="publish_btn send" @click="publishArticle">发布</div>
+              <div class="publish_btn drash" @click="saveDraft">保存草稿</div>
             </div>
           </div>
         </div>
@@ -80,7 +99,7 @@
             <div class="flex_label">封面</div>
             <div class="flex_content">
               <div class="img_con">
-                <img src="../images/noimg.gif" alt />
+                <img :src="galleryCoverImg" alt />
               </div>
               <input class="file_upload" type="file" name="img_upload" id="img_upload" />
               <button class="upload_btn" @click="uploadImg">上传图片</button>
@@ -90,8 +109,8 @@
           <div class="btns">
             <div class="flex_label">&nbsp;</div>
             <div class="flex_content">
-              <div class="publish_btn send">发布</div>
-              <div class="publish_btn drash">保存草稿</div>
+              <div class="publish_btn send" @click="publishGallery">发布</div>
+              <div class="publish_btn drash" @click="saveGalleryDraft">保存草稿</div>
             </div>
           </div>
         </div>
@@ -106,6 +125,8 @@ import Editor from "../compoents/TinyEditor.vue";
 import { ITab } from "../store/Itype";
 import ContentManage from "../compoents/ContentManage.vue";
 import Toast from "../compoents/Toast.vue";
+import { createArticle, getPublishedArticles } from "../store/articleStore";
+
 export default Vue.extend({
   data() {
     let publish_article: ITab = {
@@ -123,7 +144,16 @@ export default Vue.extend({
       tabs: {
         publish_article,
         publish_imgs
-      }
+      },
+      articleTitle: "",
+      titleLength: 0,
+      category1: "01",
+      category2: "01",
+      coverImg: "../images/noimg.gif",
+      galleryCoverImg: "../images/noimg.gif",
+      showToast: false,
+      toastMessage: "",
+      todayPublishCount: 0
     };
   },
   components: {
@@ -131,10 +161,22 @@ export default Vue.extend({
     ContentManage,
     Toast
   },
+  mounted() {
+    this.updateTodayCount();
+  },
   methods: {
+    updateTodayCount() {
+      const today = new Date().toDateString();
+      const articles = getPublishedArticles();
+      this.todayPublishCount = articles.filter(a => {
+        const publishDate = new Date(a.publishTime).toDateString();
+        return publishDate === today;
+      }).length;
+    },
+    updateTitleCount() {
+      this.titleLength = this.articleTitle.length;
+    },
     changeHeaderTab(keyName) {
-      console.log("in changeHeaderTab", keyName);
-
       for (let key in this.tabs) {
         if (key != keyName) {
           let info = this.tabs[key];
@@ -143,11 +185,104 @@ export default Vue.extend({
           this.tabs[keyName].isActive = true;
         }
       }
-
-      console.log("this.tabs==>", this.tabs);
     },
     uploadImg() {
-      document.getElementById("img_upload").click();
+      document.getElementById("img_upload")?.click();
+    },
+    handleImageUpload(event: Event) {
+      const target = event.target as HTMLInputElement;
+      const file = target.files?.[0];
+      if (file) {
+        if (file.size > 1024 * 1024) {
+          this.showToastMessage("图片大小不能超过1MB");
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          this.coverImg = e.target?.result as string;
+        };
+        reader.readAsDataURL(file);
+      }
+    },
+    showToastMessage(message: string) {
+      this.toastMessage = message;
+      this.showToast = true;
+      setTimeout(() => {
+        this.showToast = false;
+      }, 3000);
+    },
+    validateForm(): boolean {
+      if (!this.articleTitle || this.articleTitle.trim() === "") {
+        this.showToastMessage("请输入文章标题");
+        return false;
+      }
+      if (this.articleTitle.length < 11) {
+        this.showToastMessage("标题字数需在11字到30字之间");
+        return false;
+      }
+      if (this.articleTitle.length > 30) {
+        this.showToastMessage("标题不能超过30字");
+        return false;
+      }
+      const editorContent = (this.$refs.editorRef as any)?.getContent?.() || "";
+      if (!editorContent || editorContent.trim() === "") {
+        this.showToastMessage("请输入文章内容");
+        return false;
+      }
+      return true;
+    },
+    publishArticle() {
+      if (!this.validateForm()) {
+        return;
+      }
+      if (this.todayPublishCount >= 6) {
+        this.showToastMessage("今日发布数量已达上限(6篇)");
+        return;
+      }
+      const editorContent = (this.$refs.editorRef as any)?.getContent?.() || "";
+      createArticle(
+        this.articleTitle,
+        editorContent,
+        this.coverImg,
+        this.category1,
+        this.category2,
+        'published'
+      );
+      this.showToastMessage("发布成功！");
+      this.updateTodayCount();
+      this.resetForm();
+    },
+    saveDraft() {
+      if (!this.articleTitle || this.articleTitle.trim() === "") {
+        this.showToastMessage("请输入文章标题");
+        return;
+      }
+      const editorContent = (this.$refs.editorRef as any)?.getContent?.() || "";
+      createArticle(
+        this.articleTitle,
+        editorContent,
+        this.coverImg,
+        this.category1,
+        this.category2,
+        'draft'
+      );
+      this.showToastMessage("草稿已保存！");
+    },
+    publishGallery() {
+      this.showToastMessage("图集发布功能开发中...");
+    },
+    saveGalleryDraft() {
+      this.showToastMessage("图集草稿保存功能开发中...");
+    },
+    resetForm() {
+      this.articleTitle = "";
+      this.titleLength = 0;
+      this.category1 = "01";
+      this.category2 = "01";
+      this.coverImg = "../images/noimg.gif";
+      if (this.$refs.editorRef) {
+        (this.$refs.editorRef as any).setContent("");
+      }
     }
   }
 });
@@ -211,6 +346,9 @@ export default Vue.extend({
   line-height: 38px;
   color: #999;
 }
+.error_color {
+  color: #ff0000;
+}
 .type_active {
   border-bottom: 2px solid #ff5f5f;
 }
@@ -258,6 +396,12 @@ export default Vue.extend({
   border: 1px solid #ddd;
   border-radius: 5px;
   padding: 5px;
+  overflow: hidden;
+}
+.img_con img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .file_upload {
   position: absolute;
@@ -294,6 +438,11 @@ export default Vue.extend({
   text-align: center;
   line-height: 30px;
   display: inline-block;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+.publish_btn:hover {
+  opacity: 0.8;
 }
 .send {
   background: #ff5f5f;

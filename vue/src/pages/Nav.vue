@@ -31,22 +31,23 @@ export default Vue.extend({
 </script>
 <style scoped>
 .main {
-  width: 1180px;
-  margin: 0 auto;
+  width: 100%;
+  min-height: calc(100vh - 70px - 60px);
   display: flex;
-  justify-content: space-between;
-  margin-top: 20px;
+  margin-top: 0;
 }
 .main::-webkit-scrollbar{
   display: none;
 }
 .main_menu {
-  flex: 2;
+  width: 240px;
+  min-width: 240px;
   background: #f4f4f4;
 }
 .main_content {
-  flex: 8;
-  margin-left: 20px;
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
 }
 </style>
 
